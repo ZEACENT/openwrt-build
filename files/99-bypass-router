@@ -1,0 +1,35 @@
+#!/bin/sh
+# 99-bypass-router — NanoPi R4S 旁路由 (side-router) default network config.
+#
+# Copied into the firmware at build time (package/base-files overlay) and runs
+# once at first boot via /etc/uci-defaults, then auto-deletes itself.
+#
+# Layout:
+#   eth0 + eth1  both members of bridge br-lan — the main router's LAN cable
+#                can go into either port, they behave identically
+#   br-lan       static 192.168.3.254/24, gateway + DNS = main router 192.168.3.1
+#
+# Devices that should use this box as their gateway point at 192.168.3.254
+# (set manually per device, or via the main router's DHCP gateway option).
+# LuCI will be reachable at http://192.168.3.254 after first boot.
+
+uci -q batch <<'EOF'
+del network.lan
+del network.wan
+del network.wan6
+set network.lan=interface
+set network.lan.device='br-lan'
+set network.lan.proto='static'
+set network.lan.ipaddr='192.168.3.254'
+set network.lan.netmask='255.255.255.0'
+set network.lan.gateway='192.168.3.1'
+set network.lan.dns='192.168.3.1'
+add network device
+set network.@device[-1].name='br-lan'
+set network.@device[-1].type='bridge'
+add_list network.@device[-1].ports='eth0'
+add_list network.@device[-1].ports='eth1'
+commit network
+EOF
+
+exit 0
